@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DHCP 管理 · dnsmasq-dhcp-ui</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%234f8cff'/><text y='72' x='50' text-anchor='middle' font-size='58' fill='white' font-family='sans-serif' font-weight='bold'>D</text></svg>">
+</head>
+<body>
+
+<div class="login-mask" id="loginMask">
+  <div class="login-box">
+    <h2>需要登录</h2>
+    <p>请输入部署时配置的管理账号</p>
+    <form id="loginForm">
+      <div class="field" style="margin-bottom:12px">
+        <label for="loginUser">用户名</label>
+        <input type="text" id="loginUser" autocomplete="username" autofocus>
+      </div>
+      <div class="field">
+        <label for="loginPass">密码</label>
+        <input type="password" id="loginPass" autocomplete="current-password">
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary">登录</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">D</div>
+      <div>
+        <h1>DHCP / DNS 管理台</h1>
+        <div class="sub" id="metaLine">加载中…</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <span class="status-chip"><span class="dot" id="svcDot"></span><span id="svcText">检查中</span></span>
+    <button class="ghost sm" id="btnProbe" title="向已知 IP 发送一次 ping，刷新在线状态">刷新在线</button>
+    <button class="primary sm" id="btnRefresh">刷新</button>
+    <label class="switch-row" title="开启后每 10 秒自动刷新" style="gap:6px">
+      <span class="switch"><input type="checkbox" id="autoRefresh"><span class="slider"></span></span>
+      <span class="dim" style="font-size:12.5px">自动</span>
+    </label>
+  </header>
+
+  <section class="stats">
+    <div class="stat"><div class="label">客户端总数</div><div class="value" id="statTotal">–</div></div>
+    <div class="stat"><div class="label">在线</div><div class="value good" id="statOnline">–</div></div>
+    <div class="stat"><div class="label">静态绑定</div><div class="value accent" id="statStatic">–</div></div>
+    <div class="stat"><div class="label">动态分配</div><div class="value" id="statDynamic">–</div></div>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="clients">在线客户端</button>
+    <button class="tab" data-tab="static">静态绑定</button>
+    <button class="tab" data-tab="dhcp">DHCP 配置</button>
+    <button class="tab" data-tab="dns">DNS 配置</button>
+    <button class="tab" data-tab="logs">运行日志</button>
+  </nav>
+
+  <!-- 客户端 -->
+  <section class="tab-page" id="page-clients">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>客户端列表</h2>
+        <span class="hint">剩余租期来自 dnsmasq 租约文件；在线状态由 DHCP 交互与主动探测共同判定</span>
+        <div class="spacer"></div>
+        <input type="text" id="clientFilter" placeholder="搜索主机名 / IP / MAC" style="max-width:260px">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:34px"></th>
+              <th>主机名</th>
+              <th>IP 地址</th>
+              <th>MAC 地址</th>
+              <th>分配方式</th>
+              <th>剩余租期</th>
+              <th>最后活跃</th>
+              <th style="text-align:right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="leaseBody"></tbody>
+        </table>
+        <div class="empty" id="leaseEmpty" style="display:none">暂无客户端记录，等待设备请求地址…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 静态绑定 -->
+  <section class="tab-page" id="page-static" style="display:none">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>静态地址保留</h2>
+        <span class="hint">按 MAC 固定 IP，可单独指定网关与 DNS；数量多时用批量编辑更快</span>
+        <div class="spacer"></div>
+        <button class="ghost sm" id="btnImportFile">导入文件</button>
+        <button class="ghost sm" id="btnExportFile">导出文件</button>
+        <button class="ghost sm" id="btnAddStatic">新增单条</button>
+        <button class="primary sm" id="btnBulkEdit">批量编辑</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>设备名</th>
+              <th>MAC 地址</th>
+              <th>IP 地址</th>
+              <th>网关</th>
+              <th>DNS</th>
+              <th>状态</th>
+              <th style="text-align:right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="staticBody"></tbody>
+        </table>
+        <div class="empty" id="staticEmpty" style="display:none">尚未添加静态绑定</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DHCP -->
+  <section class="tab-page" id="page-dhcp" style="display:none">
+    <form class="panel" id="dhcpForm">
+      <div class="panel-head">
+        <h2>DHCP 服务</h2>
+        <span class="hint">修改后保存会重新生成 dnsmasq 配置并重启服务</span>
+      </div>
+      <div class="grid-form">
+        <div class="field">
+          <label>启用 DHCP</label>
+          <label class="switch-row">
+            <span class="switch"><input type="checkbox" id="dhcpEnabled"><span class="slider"></span></span>
+            <span class="dim" id="dhcpEnabledText">已启用</span>
+          </label>
+        </div>
+        <div class="field">
+          <label>权威模式</label>
+          <label class="switch-row">
+            <span class="switch"><input type="checkbox" id="dhcpAuthoritative"><span class="slider"></span></span>
+            <span class="dim">建议开启（网络中只有这一个 DHCP 时）</span>
+          </label>
+        </div>
+        <div class="field">
+          <label for="dhcpInterface">监听接口</label>
+          <input type="text" id="dhcpInterface" class="mono" placeholder="留空=除 lo 外全部">
+          <span class="tip">例：eth0；多个用逗号分隔</span>
+        </div>
+        <div class="field">
+          <label for="dhcpDomain">域名后缀</label>
+          <input type="text" id="dhcpDomain" class="mono" placeholder="lan">
+          <span class="tip">下发 option 15，并让 主机名.lan 可被解析</span>
+        </div>
+        <div class="field">
+          <label for="rangeStart">地址池起始</label>
+          <input type="text" id="rangeStart" class="mono" placeholder="192.168.1.100">
+        </div>
+        <div class="field">
+          <label for="rangeEnd">地址池结束</label>
+          <input type="text" id="rangeEnd" class="mono" placeholder="192.168.1.200">
+        </div>
+        <div class="field">
+          <label for="netmask">子网掩码</label>
+          <input type="text" id="netmask" class="mono" placeholder="255.255.255.0">
+          <span class="tip">支持 255.255.255.0 或 /24</span>
+        </div>
+        <div class="field">
+          <label for="leaseTime">默认租期</label>
+          <input type="text" id="leaseTime" class="mono" placeholder="24h">
+          <span class="tip">支持 30m、12h、7d、infinite</span>
+        </div>
+        <div class="field">
+          <label for="gateway">默认网关（option 3）</label>
+          <input type="text" id="gateway" class="mono" placeholder="192.168.1.1">
+          <span class="tip">留空则不下发网关</span>
+        </div>
+        <div class="field">
+          <label for="dhcpDns">下发 DNS（option 6）</label>
+          <input type="text" id="dhcpDns" class="mono" placeholder="192.168.1.1, 223.5.5.5">
+          <span class="tip">逗号分隔，按顺序下发给客户端</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary" id="btnSaveDhcp">保存并生效</button>
+        <button type="button" class="ghost" id="btnReload">重载服务</button>
+      </div>
+    </form>
+
+    <form class="panel" id="customForm">
+      <div class="panel-head">
+        <h2>自定义配置片段</h2>
+        <span class="hint">原样追加到生成的配置末尾，用来写界面还没覆盖的 dnsmasq 指令</span>
+      </div>
+      <div class="field">
+        <label for="customOptions">附加指令（每行一条）</label>
+        <textarea id="customOptions" class="mono" rows="6"
+          placeholder="dhcp-option=42,192.168.1.1&#10;dhcp-option=252,&#10;# 以 # 开头的行为注释"></textarea>
+        <span class="tip">
+          示例：dhcp-option=42,192.168.1.1（NTP 服务器）、dhcp-option=119,lan（搜索域）。
+          不能写 conf-file、dhcp-leasefile、dhcp-script 等由系统统一管理的指令。
+          保存前会自动做 dnsmasq 语法检查，不通过则原样回滚。
+        </span>
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary">保存并生效</button>
+      </div>
+    </form>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>生成的 dnsmasq 配置</h2>
+        <span class="hint">只读，便于排查</span>
+        <div class="spacer"></div>
+        <button class="ghost sm" id="btnShowRaw">查看</button>
+      </div>
+      <div class="rawview" id="rawView" style="display:none">加载中…</div>
+    </div>
+  </section>
+
+  <!-- DNS -->
+  <section class="tab-page" id="page-dns" style="display:none">
+    <form class="panel" id="dnsForm">
+      <div class="panel-head">
+        <h2>DNS 转发</h2>
+        <span class="hint">作为 DHCP 服务之外，可同时提供局域网 DNS 解析与缓存</span>
+      </div>
+      <div class="grid-form">
+        <div class="field">
+          <label>启用 DNS 服务</label>
+          <label class="switch-row">
+            <span class="switch"><input type="checkbox" id="dnsEnabled"><span class="slider"></span></span>
+            <span class="dim" id="dnsEnabledText">已启用</span>
+          </label>
+        </div>
+        <div class="field">
+          <label>忽略 /etc/resolv.conf</label>
+          <label class="switch-row">
+            <span class="switch"><input type="checkbox" id="dnsNoResolv"><span class="slider"></span></span>
+            <span class="dim">仅使用下方指定的上游 DNS</span>
+          </label>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label for="dnsForwarders">上游 DNS 服务器</label>
+          <input type="text" id="dnsForwarders" class="mono" placeholder="223.5.5.5, 114.114.114.114">
+          <span class="tip">逗号分隔，最多 8 个；关闭 DNS 服务时无需配置</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary">保存并生效</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 日志 -->
+  <section class="tab-page" id="page-logs" style="display:none">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>dnsmasq 运行日志</h2>
+        <span class="hint">保留最近 800 行</span>
+        <div class="spacer"></div>
+        <button class="ghost sm" id="btnRefreshLogs">刷新</button>
+      </div>
+      <div class="logview" id="logView">加载中…</div>
+    </div>
+  </section>
+</div>
+
+<!-- 静态绑定编辑 -->
+<div class="modal-mask" id="staticModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="staticModalTitle">新增静态绑定</h3>
+      <div class="spacer"></div>
+      <button class="close-x" data-close="staticModal">&times;</button>
+    </div>
+    <form id="staticForm">
+      <div class="modal-body">
+        <div class="grid-form">
+          <div class="field">
+            <label for="fName">设备名</label>
+            <input type="text" id="fName" placeholder="nas">
+            <span class="tip">可选，将写入本机解析记录</span>
+          </div>
+          <div class="field">
+            <label for="fMac">MAC 地址 *</label>
+            <input type="text" id="fMac" class="mono" placeholder="AA:BB:CC:DD:EE:FF" required>
+          </div>
+          <div class="field">
+            <label for="fIp">IP 地址 *</label>
+            <input type="text" id="fIp" class="mono" placeholder="192.168.1.10" required>
+          </div>
+          <div class="field">
+            <label for="fGateway">网关（留空继承全局）</label>
+            <input type="text" id="fGateway" class="mono" placeholder="192.168.1.1">
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label for="fDns">DNS（留空继承全局）</label>
+            <input type="text" id="fDns" class="mono" placeholder="223.5.5.5, 114.114.114.114">
+          </div>
+          <div class="field">
+            <label for="fLease">租期（留空继承全局）</label>
+            <input type="text" id="fLease" class="mono" placeholder="24h">
+          </div>
+          <div class="field">
+            <label for="fNote">备注</label>
+            <input type="text" id="fNote" placeholder="选填">
+          </div>
+          <div class="field">
+            <label>状态</label>
+            <label class="switch-row">
+              <span class="switch"><input type="checkbox" id="fEnabled" checked><span class="slider"></span></span>
+              <span class="dim">启用该绑定</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="ghost" data-close="staticModal">取消</button>
+        <button type="submit" class="primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 批量编辑静态绑定 -->
+<div class="modal-mask" id="bulkModal">
+  <div class="modal" style="max-width:800px">
+    <div class="modal-head">
+      <h3>批量编辑静态绑定</h3>
+      <div class="spacer"></div>
+      <button class="close-x" data-close="bulkModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:14px">
+        <label for="bulkMode">保存方式</label>
+        <select id="bulkMode">
+          <option value="merge">追加并更新 — 按 MAC 覆盖同名设备，保留其它已有绑定</option>
+          <option value="replace">整体替换 — 清空现有绑定，只保留文本框里的这些</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="bulkText">dnsmasq 配置</label>
+        <textarea id="bulkText" class="mono" rows="15" spellcheck="false"
+          placeholder="dhcp-host=6E:53:C6:69:A9:DA,set:host_6e53c669a9da,192.168.1.21,fnos,infinite&#10;dhcp-host=42:F2:2C:11:F9:23,set:host_42f22c11f923,192.168.1.22,win10-edge"></textarea>
+        <span class="tip">
+          每行一条 dhcp-host；单独指定网关或 DNS 时在下面补
+          dhcp-option=tag:标签,3,网关 与 dhcp-option=tag:标签,6,DNS1,DNS2。
+          以 # 开头的是注释，非 dhcp-host 的行会被忽略。
+        </span>
+      </div>
+
+      <div id="bulkStatus" class="bulk-status">正在解析…</div>
+      <div id="bulkDetail" class="bulk-list"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="ghost" data-close="bulkModal">取消</button>
+      <button type="button" class="primary" id="btnBulkSave" disabled>保存</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="importFileInput" accept=".conf,.txt,.leases" style="display:none">
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
