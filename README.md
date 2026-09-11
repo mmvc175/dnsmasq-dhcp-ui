@@ -6,6 +6,10 @@
 
 静态保留 · 动态分配 · 按设备下发 DNS · 租约总览（IP / MAC / 主机名 / 剩余租期 / 静态或动态）
 
+主要是局域网DHCP服务器和DNS服务器，之前使用单独的openwrt来完成这些工作，我的需求不值得使用整个openwrt，所以找了很多docker镜像和github项目，但是都没有我想要的效果，所以就使用deepseek V4.1整合了三个我认为满足我需求的项目，我提需求让AI完成。
+
+目前使用下来完全满足我的需求，下一步可能增加时间段控制，或者定时dns屏蔽，简单的控制上网设备和时间。
+
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Base Image](https://img.shields.io/badge/base-alpine%203.20-0D597F?logo=alpinelinux&logoColor=white)](https://alpinelinux.org/)
@@ -111,7 +115,11 @@ Then open `http://<host-ip>:8080`.
 ## 📋 界面说明
 
 <!-- 截图占位：把图片放到 docs/screenshot.png 后，删掉下面两行的注释符即可 -->
-<!-- ![界面截图](docs/screenshot.png) -->
+[界面截图](screenshot/1.png)
+[界面截图](screenshot/2.png)
+[界面截图](screenshot/3.png)
+[界面截图](screenshot/4.png)
+[界面截图](screenshot/5.png)
 
 | 页签 | 内容 |
 |---|---|
@@ -446,7 +454,7 @@ systemctl disable --now systemd-resolved
 | 项目 | 作者 | 许可 | 借鉴的内容 |
 |---|---|---|---|
 | [`jpillora/docker-dnsmasq`](https://github.com/jpillora/docker-dnsmasq) | Jaime Pillora | MIT | 把 dnsmasq 装进容器对外提供服务的整体思路与配置骨架 |
-| DNSmasq Lease Viewer | Lars Bengtsson | MIT | 租约文件解析、剩余租期计算，以及"纯 Python 标准库、零依赖"的实现取向 |
+| [`DNSmasq Lease Viewer`](https://github.com/L71/dnsmasq-viewer) | Lars Bengtsson | MIT | 租约文件解析、剩余租期计算，以及"纯 Python 标准库、零依赖"的实现取向 |
 | [`goodwe1l/xiaomi-ax6000-dnsmasq-ui`](https://github.com/goodwe1l/xiaomi-ax6000-dnsmasq-ui) | goodwe1l | 未随仓库附许可证 | 静态租约 + 标签模板 + 逐设备网关 / DNS 的数据模型与交互设计 |
 
 本项目为独立实现，未直接复制上述项目的源代码；致谢的是设计启发。为满足 MIT 许可的署名要求，
