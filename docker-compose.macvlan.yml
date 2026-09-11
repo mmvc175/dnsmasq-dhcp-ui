@@ -1,0 +1,53 @@
+# 备选部署方式：macvlan。
+#
+# 适合"容器要有独立 IP、不占用宿主机 53/67 端口"的场景。
+# 使用前提：
+#   1. 先创建 macvlan 网络（把 subnet/gateway/parent 改成你的环境）
+#      docker network create -d macvlan \
+#        --subnet=192.168.1.0/24 \
+#        --gateway=192.168.1.1 \
+#        -o parent=eth0 \
+#        dhcp-net
+#   2. 给容器分配一个局域网静态 IP（下例为 192.168.1.2）
+#   3. 注意：macvlan 下宿主机默认无法直接访问容器 IP，需在宿主机额外配置 macvlan 子接口
+#
+# 注意：macvlan 网络中，容器无法自动获得地址，必须显式指定 ipv4_address。
+
+services:
+  dhcp:
+    image: dnsmasq-dhcp-ui:latest
+    build:
+      context: .
+    container_name: dnsmasq-dhcp-ui
+    restart: unless-stopped
+
+    networks:
+      dhcp-net:
+        ipv4_address: 192.168.1.2
+
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - NET_BIND_SERVICE
+
+    environment:
+      WEB_PORT: "8080"
+      # WEB_USER: "admin"
+      # WEB_PASS: "change-me"
+      DHCP_INTERFACE: "eth0"
+      DHCP_RANGE_START: "192.168.1.100"
+      DHCP_RANGE_END: "192.168.1.200"
+      DHCP_NETMASK: "255.255.255.0"
+      DHCP_LEASE_TIME: "24h"
+      DHCP_GATEWAY: "192.168.1.1"
+      DHCP_DNS: "192.168.1.2, 223.5.5.5"
+      DHCP_DOMAIN: "lan"
+      DNS_FORWARDERS: "223.5.5.5, 114.114.114.114"
+
+    volumes:
+      - ./data:/data
+
+networks:
+  dhcp-net:
+    external: true
+    name: dhcp-net
