@@ -80,7 +80,7 @@ Then open `http://<host-ip>:8080`.
 | 参考项目 | 能做什么 | 缺什么 |
 |---|---|---|
 | [`jpillora/docker-dnsmasq`](https://github.com/jpillora/docker-dnsmasq) | 把 dnsmasq 装进容器，配 webproc 编辑配置 | 只能改配置文本，看不到租约 |
-| DNSmasq Lease Viewer | 查看租约（IP / MAC / 主机名 / 过期时间） | 不是 Docker 部署，只能看不能管 |
+| [`DNSmasq Lease Viewer`](https://github.com/L71/dnsmasq-viewer) | 查看租约（IP / MAC / 主机名 / 过期时间） | 不是 Docker 部署，只能看不能管 |
 | [`goodwe1l/xiaomi-ax6000-dnsmasq-ui`](https://github.com/goodwe1l/xiaomi-ax6000-dnsmasq-ui) | 完整的静态绑定 + 租约管理交互 | 深度依赖 OpenWrt 的 UCI，Docker 里跑不起来 |
 
 本项目把三者的能力合并，**去掉 UCI 依赖，改为直接生成 dnsmasq 原生配置**
