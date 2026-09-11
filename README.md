@@ -6,10 +6,6 @@
 
 静态保留 · 动态分配 · 按设备下发 DNS · 租约总览（IP / MAC / 主机名 / 剩余租期 / 静态或动态）
 
-主要是局域网DHCP服务器和DNS服务器，之前使用单独的openwrt来完成这些工作，我的需求不值得使用整个openwrt，所以找了很多docker镜像和github项目，但是都没有我想要的效果，所以就使用deepseek V4.1整合了三个我认为满足我需求的项目，我提需求让AI完成。
-
-目前使用下来完全满足我的需求，下一步可能增加时间段控制，或者定时dns屏蔽，简单的控制上网设备和时间。
-
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Base Image](https://img.shields.io/badge/base-alpine%203.20-0D597F?logo=alpinelinux&logoColor=white)](https://alpinelinux.org/)
@@ -72,6 +68,10 @@ Then open `http://<host-ip>:8080`.
 ---
 
 ## 它解决什么问题
+
+主要是局域网DHCP服务器和DNS服务器，之前使用单独的openwrt来完成这些工作，我的需求不值得使用整个openwrt，所以找了很多docker镜像和github项目，但是都没有我想要的效果，所以就使用deepseek V4.1整合了三个我认为满足我需求的项目，我提需求让AI完成。
+
+目前使用下来完全满足我的需求，下一步可能增加时间段控制，或者定时dns屏蔽，简单的控制上网设备和时间。
 
 把 dnsmasq 当 DHCP 服务器用很省事，但配置全靠手写 `dnsmasq.conf`，而且**看不到租约**——谁在线、分到了哪个 IP、还剩多久到期，都得自己 `cat /var/lib/misc/dnsmasq.leases` 再算。
 
