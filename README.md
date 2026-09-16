@@ -115,11 +115,11 @@ Then open `http://<host-ip>:8080`.
 ## 📋 界面说明
 
 <!-- 截图占位：把图片放到 docs/screenshot.png 后，删掉下面两行的注释符即可 -->
-[界面截图](screenshot/1.png)
-[界面截图](screenshot/2.png)
-[界面截图](screenshot/3.png)
-[界面截图](screenshot/4.png)
-[界面截图](screenshot/5.png)
+![界面截图](screenshot/1.png)
+![界面截图](screenshot/2.png)
+![界面截图](screenshot/3.png)
+![界面截图](screenshot/4.png)
+![界面截图](screenshot/5.png)
 
 | 页签 | 内容 |
 |---|---|
